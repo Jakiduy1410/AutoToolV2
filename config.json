@@ -1,0 +1,7 @@
+{
+  "clones": [
+    { "package": "com.roblox.clienv", "name": "Acc Chinh" },
+    { "package": "com.roblox.clienx", "name": "Acc Phu" }
+  ],
+  "check_interval": 5
+}
