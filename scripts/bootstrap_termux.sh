@@ -2,11 +2,11 @@
 set -e
 
 echo "======================================"
-echo "[ AutoTool ] Bootstrap Termux - Phase 0"
+echo "[ AutoToolV2 ] Bootstrap Termux - Phase 0"
 echo "======================================"
 
 ### 1. Check Termux
-if [ ! -d "$PREFIX" ]; then
+if [ -z "$PREFIX" ]; then
   echo "[ERROR] Not running inside Termux."
   exit 1
 fi
@@ -24,10 +24,11 @@ pkg install -y \
   procps \
   iproute2 \
   coreutils \
-  tsu
+  tsu \
+  python-psutil
 
-pip install --upgrade pip
-pip install psutil requests
+echo "[*] Installing python libs (safe)..."
+pip install --no-deps requests
 
 ### 4. Setup storage
 echo "[*] Setting up shared storage..."
