@@ -1,0 +1,10 @@
+[2026-01-04 22:44:37] [RECOVER] start pkg=com.zamdepzai.clienv
+[2026-01-04 22:44:37] [RECOVER] am force-stop com.zamdepzai.clienv
+[2026-01-04 22:44:39] [OK] stopped
+[2026-01-04 22:44:39] [RECOVER] launch via monkey
+[2026-01-04 22:44:43] [OK] relaunched pid=25532
+[2026-01-04 23:02:10] [RECOVER] start pkg=com.zamdepzai.clienv
+[2026-01-04 23:02:10] [RECOVER] am force-stop com.zamdepzai.clienv
+[2026-01-04 23:02:13] [OK] stopped
+[2026-01-04 23:02:13] [RECOVER] launch via monkey
+[2026-01-04 23:02:18] [OK] relaunched pid=48636

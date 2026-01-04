@@ -1,0 +1,50 @@
+[2026-01-04 21:16:24] Watchdog started (FINAL Phase 2.2)
+[2026-01-04 21:16:44] [OK] com.zamdepzai.clienv IN-GAME (PID=56599)
+[2026-01-04 21:27:42] Watchdog started (Fixed raw-by-package + correct debounce)
+[2026-01-04 21:27:47] [WARN] com.zamdepzai.clienv OFFLINE
+[2026-01-04 21:28:07] [OK] com.zamdepzai.clienv IN-GAME (PID=62739)
+[2026-01-04 21:30:13] [WARN] com.zamdepzai.clienv OFFLINE
+[2026-01-04 21:38:57] Watchdog started (Phase 2.3: OFFLINE + DISCONNECT + STUCK)
+[2026-01-04 21:38:57] [WARN] com.zamdepzai.clienv OFFLINE
+[2026-01-04 21:39:07] [OK] com.zamdepzai.clienv RUNNING_OK (PID=4075)
+[2026-01-04 21:39:32] [WARN] com.zamdepzai.clienv OFFLINE
+[2026-01-04 21:39:37] [OK] com.zamdepzai.clienv RUNNING_OK (PID=4382)
+[2026-01-04 21:40:23] [WARN] com.zamdepzai.clienv OFFLINE
+[2026-01-04 21:48:37] Watchdog started (PID + LOGCAT + NET CHECK)
+[2026-01-04 21:49:17] [OK] com.zamdepzai.clienv RUNNING_OK (PID=11219)
+[2026-01-04 21:50:37] [WARN] com.zamdepzai.clienv OFFLINE
+[2026-01-04 21:52:09] Watchdog started (PID + LOGCAT + NET CHECK)
+[2026-01-04 21:52:29] [OK] com.zamdepzai.clienv RUNNING_OK (PID=14070)
+[2026-01-04 22:06:55] [WARN] com.zamdepzai.clienv RUNNING_ISSUE=NET_DOWN
+[2026-01-04 22:06:55] [INFO] issue_detail: ping_fail_streak=2
+[2026-01-04 22:07:15] [OK] com.zamdepzai.clienv RUNNING_OK (PID=14070)
+[2026-01-04 22:08:18] [WARN] com.zamdepzai.clienv RUNNING_ISSUE=NET_DOWN
+[2026-01-04 22:08:18] [INFO] issue_detail: ping_fail_streak=2
+[2026-01-04 22:11:48] [OK] com.zamdepzai.clienv RUNNING_OK (PID=14070)
+[2026-01-04 22:20:10] [WARN] com.zamdepzai.clienv OFFLINE
+[2026-01-04 22:21:25] [OK] com.zamdepzai.clienv RUNNING_OK (PID=64402)
+[2026-01-04 22:21:30] [WARN] com.zamdepzai.clienv OFFLINE
+[2026-01-04 22:26:52] [OK] com.zamdepzai.clienv RUNNING_OK (PID=2160)
+[2026-01-04 22:29:03] [WARN] com.zamdepzai.clienv OFFLINE
+[2026-01-04 22:29:08] [OK] com.zamdepzai.clienv RUNNING_OK (PID=3948)
+[2026-01-04 22:35:45] [WARN] com.zamdepzai.clienv OFFLINE
+[2026-01-04 22:35:50] [OK] com.zamdepzai.clienv RUNNING_OK (PID=13175)
+[2026-01-04 22:41:36] [INFO] Watchdog started (PID + LOGCAT + NET CHECK) pkg=com.zamdepzai.clienv
+[2026-01-04 22:44:17] [WARN] com.zamdepzai.clienv OFFLINE
+[2026-01-04 22:44:37] [WARN] com.zamdepzai.clienv OFFLINE (streak=2)
+[2026-01-04 22:44:37] [WARN] TRIGGER recover reason=OFFLINE pkg=com.zamdepzai.clienv
+[2026-01-04 22:44:42] [OK] com.zamdepzai.clienv RUNNING_OK (PID=25532)
+[2026-01-04 22:44:43] [OK] recover done OK (reason=OFFLINE)
+[2026-01-04 22:45:03] [OK] com.zamdepzai.clienv RUNNING_OK (pid=25532)
+[2026-01-04 23:01:36] [WARN] com.zamdepzai.clienv OFFLINE
+[2026-01-04 23:02:10] [WARN] com.zamdepzai.clienv OFFLINE (streak=2)
+[2026-01-04 23:02:10] [WARN] TRIGGER recover reason=OFFLINE pkg=com.zamdepzai.clienv
+[2026-01-04 23:02:17] [OK] com.zamdepzai.clienv RUNNING_OK (PID=48636)
+[2026-01-04 23:02:18] [OK] recover done OK (reason=OFFLINE)
+[2026-01-04 23:02:36] [ERR] No package specified. Run: python engine/watchdog.py <package>
+[2026-01-04 23:02:39] [OK] com.zamdepzai.clienv RUNNING_OK (pid=48636)
+[2026-01-04 23:06:05] [ERR] No package specified. Run: python engine/watchdog.py <package>
+[2026-01-04 23:07:48] [ERR] No package specified. Run: python engine/watchdog.py <package>
+[2026-01-04 23:26:40] [ERR] No package specified. Run: python engine/watchdog.py <package>
+[2026-01-04 23:28:14] [ERR] No package specified. Run: python engine/watchdog.py <package>
+[2026-01-04 23:29:42] [ERR] No package specified. Run: python engine/watchdog.py <package>

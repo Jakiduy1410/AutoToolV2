@@ -1,0 +1,17 @@
+{
+  "packages": [
+    "com.zamdepzai.clienv"
+  ],
+  "com.zamdepzai.clienv": {
+    "pid": 48636,
+    "running": true,
+    "status": "RUNNING_OK",
+    "issue_type": null,
+    "issue_detail": null,
+    "last_seen": 1767538936
+  },
+  "_net": {
+    "ok": true,
+    "fail_streak": 0
+  }
+}

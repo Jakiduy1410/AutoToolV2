@@ -1,0 +1,19 @@
+[2026-01-04 23:26:40] [ERR] Missing package. Set it first (Menu [2]) or run: bash workflows/auto_rejoin.sh <package>
+[2026-01-04 23:28:14] [OK] Auto Rejoin started pkg=com.zamdepzai.clienv
+[2026-01-04 23:28:14] [INFO] status=NO_STATE
+[2026-01-04 23:28:14] [RECOVER] trigger recover for com.zamdepzai.clienv (status=NO_STATE)
+[2026-01-04 23:28:25] [INFO] status=NO_STATE
+[2026-01-04 23:28:25] [INFO] recover skipped (cooldown)
+[2026-01-04 23:28:30] [INFO] status=NO_STATE
+[2026-01-04 23:28:30] [RECOVER] trigger recover for com.zamdepzai.clienv (status=NO_STATE)
+[2026-01-04 23:28:42] [INFO] status=NO_STATE
+[2026-01-04 23:28:42] [RECOVER] trigger recover for com.zamdepzai.clienv (status=NO_STATE)
+[2026-01-04 23:28:53] [INFO] status=NO_STATE
+[2026-01-04 23:28:53] [INFO] recover skipped (cooldown)
+[2026-01-04 23:28:58] [INFO] status=NO_STATE
+[2026-01-04 23:29:42] [OK] Auto Rejoin started pkg=com.zamdepzai.clienv
+[2026-01-04 23:29:42] [INFO] status=NO_STATE
+[2026-01-04 23:29:42] [RECOVER] trigger recover for com.zamdepzai.clienv (status=NO_STATE)
+[2026-01-04 23:29:54] [INFO] status=NO_STATE
+[2026-01-04 23:29:54] [RECOVER] trigger recover for com.zamdepzai.clienv (status=NO_STATE)
+[2026-01-04 23:30:05] [INFO] status=NO_STATE
