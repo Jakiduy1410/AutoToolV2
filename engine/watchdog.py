@@ -39,6 +39,7 @@ LOG_DIR = BASE_DIR / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 WATCHDOG_LOG = LOG_DIR / "watchdog.log"
+STATE_FILE = BASE_DIR / "state.json"
 
 # =======================
 # UTIL
@@ -181,10 +182,34 @@ def main():
 
     log(f"Watchdog started (PID + LOGCAT + NET CHECK) pkg={pkg}", "INFO")
 
+    last_state = None
+
+    def record_state(status: str, issue: Optional[str] = None, running_issue: Optional[str] = None, level: str = "INFO"):
+        nonlocal last_state
+        state_tuple = (status, issue or None, running_issue or None)
+        if last_state == state_tuple:
+            return
+        last_state = state_tuple
+
+        payload = {
+            "package": pkg,
+            "status": status,
+            "issue": issue or None,
+            "running_issue": running_issue or None,
+        }
+
+        try:
+            STATE_FILE.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        except Exception as e:
+            log(f"Failed to write state.json: {e}", "ERR")
+
+        issue_text = payload["issue"] if payload["issue"] is not None else "-"
+        running_text = payload["running_issue"] if payload["running_issue"] is not None else "-"
+        log(f"STATE pkg={pkg} status={status} issue={issue_text} running_issue={running_text}", level)
+
     offline_streak = 0
     ping_fail_streak = 0
     last_recover_at = 0.0
-    last_issue = None  # for de-dup
 
     while not STOP:
         pid = get_pid(pkg)
@@ -206,10 +231,7 @@ def main():
 
         # OFFLINE confirmed => recover
         if offline_streak >= OFFLINE_STREAK_NEED:
-            issue = "OFFLINE"
-            if last_issue != issue:
-                log(f"{pkg} OFFLINE (streak={offline_streak})", "WARN")
-                last_issue = issue
+            record_state("OFFLINE", issue="OFFLINE", running_issue=None, level="WARN")
 
             if now - last_recover_at >= RECOVER_COOLDOWN_SEC:
                 trigger_recover(pkg, "OFFLINE")
@@ -223,10 +245,7 @@ def main():
         # If app running, check disconnect via logcat (279)
         if pid is not None:
             if logcat_has_disconnect(pkg):
-                issue = "DISCONNECT_279"
-                if last_issue != issue:
-                    log(f"{pkg} RUNNING_ISSUE=DISCONNECT_279 (pid={pid})", "WARN")
-                    last_issue = issue
+                record_state("RUNNING_ISSUE", issue="DISCONNECT_279", running_issue="DISCONNECT_279", level="WARN")
 
                 if now - last_recover_at >= RECOVER_COOLDOWN_SEC:
                     trigger_recover(pkg, "DISCONNECT_279")
@@ -239,23 +258,17 @@ def main():
 
         # NET down: chỉ log (không recover)
         if ping_fail_streak >= PING_FAIL_STREAK_NEED:
-            issue = "NET_DOWN"
-            if last_issue != issue:
-                log(f"{pkg} RUNNING_ISSUE=NET_DOWN ping_fail_streak={ping_fail_streak}", "WARN")
-                last_issue = issue
+            record_state("RUNNING_ISSUE", issue=None, running_issue="NET_DOWN", level="WARN")
         else:
             # if nothing wrong & previously had issues, mark OK once
-            if last_issue is not None and pid is not None and ping_fail_streak == 0:
-                log(f"{pkg} RUNNING_OK (pid={pid})", "OK")
-                last_issue = None
-            elif last_issue is not None and pid is None:
-                # handled above
-                pass
-            elif last_issue is None and pid is not None and DEBUG:
-                log(f"[DBG] pid={pid} ping_fail_streak={ping_fail_streak}", "DBG")
+            if pid is not None and ping_fail_streak == 0:
+                record_state("RUNNING_OK", issue=None, running_issue=None, level="OK")
+            elif pid is None and DEBUG:
+                log(f"[DBG] pid=None ping_fail_streak={ping_fail_streak}", "DBG")
 
         time.sleep(SLOW_INTERVAL_SEC)
 
+    record_state("STOPPED", issue=None, running_issue=None, level="INFO")
     log("Watchdog stopped", "INFO")
     return 0
 
