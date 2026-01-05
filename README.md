@@ -39,7 +39,7 @@ AutoToolV2/
 ├─ logs/
 │  ├─ watchdog.log             # Log watchdog
 │  └─ recover.log              # Log recover
-└─ state.json                  # (tuỳ chọn) trạng thái runtime
+└─ state.json                  # (tuỳ chọn) trạng thái runtime (schema chuẩn bên dưới)
 3) Chạy nhanh (Quick start)
 3.1 Mở menu
 bash
@@ -182,6 +182,31 @@ Chuẩn hoá state.json (nếu dùng) và format log gọn hơn
 Trigger recover theo rule rõ ràng (OFFLINE, NET_DOWN streak, logcat disconnect)
 
 Thêm README chi tiết cho từng workflow (inputs/outputs)
+
+11) state.json: schema chuẩn + ví dụ
+Nếu dùng state.json để các workflow giao tiếp, hãy giữ đúng schema sau:
+
+```json
+{
+  "package": "com.example.game",          // tên package đang theo dõi
+  "status": "RUNNING_OK",                 // RUNNING_OK | RUNNING_ISSUE | OFFLINE | STOPPED
+  "issue": "OFFLINE",                     // (optional) issue đã xác nhận, có thể null
+  "running_issue": "NET_DOWN"             // (optional) issue đang gặp khi RUNNING_ISSUE, có thể null
+}
+```
+
+Log watchdog sẽ luôn đi kèm dòng `STATE pkg=<pkg> status=<status> issue=<issue|-> running_issue=<running_issue|->` để tiện grep/tail.
+
+12) Kiểm thử thủ công (watchdog + auto_rejoin)
+- Chuẩn bị: đặt package trong `config/game_package.txt` hoặc chạy `bash workflows/watchdog_start.sh <package>`.
+- Mở 2 terminal:
+  - Terminal 1: `bash workflows/watchdog_start.sh <package>` và xem log bằng `tail -f logs/watchdog.log`.
+  - Terminal 2: `bash workflows/auto_rejoin.sh <package>` và xem log bằng `tail -f logs/auto_rejoin.log`.
+- Kịch bản thử:
+  1. App đang chạy bình thường: trong `logs/watchdog.log` có dòng `STATE ... status=RUNNING_OK ...` và `state.json` phản ánh tương ứng.
+  2. Tắt app (force-stop): watchdog log `STATE ... status=OFFLINE ...`, `state.json` đổi sang OFFLINE, auto_rejoin log `status=STATUS OFFLINE ...` và gọi recover (xem thêm `logs/recover.log`).
+  3. Ngắt mạng (ping fail): watchdog log `STATE ... status=RUNNING_ISSUE ... running_issue=NET_DOWN`, auto_rejoin thấy `running_issue=NET_DOWN` và bắn recover (sau cooldown).
+- Sau khi thử xong, stop bằng `bash workflows/watchdog_stop.sh` hoặc `Ctrl+C` ở các terminal và kiểm tra `state.json` cuối cùng có status `STOPPED` nếu watchdog dừng.
 
 10) License
 TBD

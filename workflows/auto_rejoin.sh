@@ -9,7 +9,10 @@ STATE="$ROOT/state.json"
 mkdir -p "$ROOT/logs" "$ROOT/config"
 
 ts(){ date "+%Y-%m-%d %H:%M:%S"; }
-log(){ echo "[$(ts)] $*" | tee -a "$LOG"; }
+log(){
+  local level="${2:-INFO}"
+  echo "[$(ts)] [$level] $1" | tee -a "$LOG"
+}
 
 # ưu tiên đọc pkg từ config, nếu không có thì lấy arg1
 PKG_FILE="$ROOT/config/game_package.txt"
@@ -19,14 +22,14 @@ if [[ -z "${PKG}" && -f "$PKG_FILE" ]]; then
 fi
 
 if [[ -z "${PKG}" ]]; then
-  log "[ERR] Missing package. Set it first (Menu [2]) or run: bash workflows/auto_rejoin.sh <package>"
+  log "Missing package. Set it first (Menu [2]) or run: bash workflows/auto_rejoin.sh <package>" "ERR"
   exit 1
 fi
 
 echo "$$" > "$PIDFILE"
-trap 'rm -f "$PIDFILE"; log "[OK] Auto Rejoin stopped"; exit 0' INT TERM
+trap 'rm -f "$PIDFILE"; log "Auto Rejoin stopped" "OK"; exit 0' INT TERM
 
-log "[OK] Auto Rejoin started pkg=$PKG"
+log "Auto Rejoin started pkg=$PKG" "OK"
 
 # đảm bảo watchdog đang chạy (nếu m đã có watchdog_start.sh)
 if [[ -f "$ROOT/workflows/watchdog_start.sh" ]]; then
@@ -45,26 +48,29 @@ try:
 except Exception:
     print("BAD_STATE"); raise SystemExit
 
-# ưu tiên vài key phổ biến
-for k in ["status","confirmed","confirmed_state","state"]:
-    if k in d and isinstance(d[k], str):
-        print(d[k]); raise SystemExit
+pkg = d.get("package") if isinstance(d.get("package"), str) else ""
+status = d.get("status") if isinstance(d.get("status"), str) else ""
+issue = d.get("issue") if isinstance(d.get("issue"), str) else None
+running_issue = d.get("running_issue") if isinstance(d.get("running_issue"), str) else None
 
-# fallback: nếu có "running_issue" hay "issue"
-if "running_issue" in d and isinstance(d["running_issue"], str):
-    print("RUNNING_ISSUE_"+d["running_issue"]); raise SystemExit
-if "issue" in d and isinstance(d["issue"], str):
-    print("RUNNING_ISSUE_"+d["issue"]); raise SystemExit
+parts = ["STATUS", status or "UNKNOWN"]
+if pkg:
+    parts.append(f"pkg={pkg}")
+if issue:
+    parts.append(f"issue={issue}")
+if running_issue:
+    parts.append(f"running_issue={running_issue}")
 
-print("UNKNOWN")
+print(" ".join(parts))
 PY
 }
 
 # rule: chỉ recover khi OFFLINE hoặc có ISSUE (NET_DOWN / DISCONNECT / STUCK)
 should_recover() {
   case "$1" in
-    OFFLINE|NO_STATE|BAD_STATE) return 0 ;;
-    RUNNING_ISSUE*|*NET_DOWN*|*DISCONNECT*|*STUCK*) return 0 ;;
+    STATUS\ OFFLINE*) return 0 ;;
+    STATUS\ UNKNOWN*|NO_STATE|BAD_STATE) return 0 ;;
+    *issue=*|*running_issue=*) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -76,7 +82,7 @@ LAST_RECOVER=0
 
 while true; do
   STATUS="$(read_status || true)"
-  log "[INFO] status=$STATUS"
+  log "status=$STATUS"
 
   now="$(date +%s)"
   if should_recover "$STATUS"; then
@@ -84,16 +90,15 @@ while true; do
     if (( now - LAST_RECOVER >= COOLDOWN )); then
       LAST_RECOVER="$now"
       if [[ -f "$ROOT/workflows/recover.sh" ]]; then
-        log "[RECOVER] trigger recover for $PKG (status=$STATUS)"
+        log "trigger recover for $PKG (status=$STATUS)" "RECOVER"
         bash "$ROOT/workflows/recover.sh" "$PKG" || true
       else
-        log "[ERR] workflows/recover.sh not found"
+        log "workflows/recover.sh not found" "ERR"
       fi
     else
-      log "[INFO] recover skipped (cooldown)"
+      log "recover skipped (cooldown)"
     fi
   fi
 
   sleep "$INTERVAL"
 done
-
