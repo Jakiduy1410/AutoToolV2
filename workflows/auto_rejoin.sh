@@ -55,13 +55,10 @@ pkg = d.get("package") if isinstance(d.get("package"), str) else ""
 status = d.get("status") if isinstance(d.get("status"), str) else ""
 issue = d.get("issue") if isinstance(d.get("issue"), str) else None
 running_issue = d.get("running_issue") if isinstance(d.get("running_issue"), str) else None
-clone_id = d.get("clone_id") if isinstance(d.get("clone_id"), str) else ""
 
 parts = ["STATUS", status or "UNKNOWN"]
 if pkg:
     parts.append(f"pkg={pkg}")
-if clone_id:
-    parts.append(f"clone_id={clone_id}")
 if issue:
     parts.append(f"issue={issue}")
 if running_issue:
@@ -74,11 +71,9 @@ PY
 # rule: chỉ recover khi OFFLINE hoặc có ISSUE (NET_DOWN / DISCONNECT / STUCK)
 should_recover() {
   case "$1" in
-    *issue=CIRCUIT_OPEN*|*issue=GRACE_PERIOD*) return 1 ;; # do not recover while circuit open or grace
-    *running_issue=NET_UNSTABLE*) return 1 ;;
-    STATUS\ OFFLINE*|*issue=OFFLINE*) return 0 ;;
+    STATUS\ OFFLINE*) return 0 ;;
     STATUS\ UNKNOWN*|NO_STATE|BAD_STATE) return 0 ;;
-    *running_issue=NET_DOWN*|*running_issue=DISCONNECT*|*issue=DISCONNECT*) return 0 ;;
+    *issue=*|*running_issue=*) return 0 ;;
     *) return 1 ;;
   esac
 }

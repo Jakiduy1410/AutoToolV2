@@ -48,10 +48,7 @@ RUNTIME_DIR = BASE_DIR / "runtime"
 RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
 
 WATCHDOG_LOG = LOG_DIR / "watchdog.log"
-EVENTS_LOG = LOG_DIR / "events.log"
-STATE_FILE = RUNTIME_DIR / f"state.{CLONE_ID}.json"
-COOLDOWN_FILE = RUNTIME_DIR / f"cooldown.{CLONE_ID}.json"
-STATE_COMPAT_FILE = BASE_DIR / "state.json"  # để auto_rejoin cũ vẫn đọc được
+STATE_FILE = BASE_DIR / "state.json"
 
 # =======================
 # UTIL
@@ -324,8 +321,34 @@ def main():
         running_text = payload["running_issue"] if payload["running_issue"] is not None else "-"
         log(f"STATE pkg={pkg} status={status} issue={issue_text} running_issue={running_text}", level)
 
+    last_state = None
+
+    def record_state(status: str, issue: Optional[str] = None, running_issue: Optional[str] = None, level: str = "INFO"):
+        nonlocal last_state
+        state_tuple = (status, issue or None, running_issue or None)
+        if last_state == state_tuple:
+            return
+        last_state = state_tuple
+
+        payload = {
+            "package": pkg,
+            "status": status,
+            "issue": issue or None,
+            "running_issue": running_issue or None,
+        }
+
+        try:
+            STATE_FILE.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        except Exception as e:
+            log(f"Failed to write state.json: {e}", "ERR")
+
+        issue_text = payload["issue"] if payload["issue"] is not None else "-"
+        running_text = payload["running_issue"] if payload["running_issue"] is not None else "-"
+        log(f"STATE pkg={pkg} status={status} issue={issue_text} running_issue={running_text}", level)
+
     offline_streak = 0
     ping_fail_streak = 0
+    last_recover_at = 0.0
 
     while not STOP:
         now = time.time()
@@ -346,92 +369,45 @@ def main():
         else:
             ping_fail_streak = 0
 
-        grace_remaining = max(0, grace_until - now)
-        cooldown_remaining = max(0, (NET_UNSTABLE_COOLDOWN if net_status == "NET_UNSTABLE" else RECOVER_COOLDOWN_SEC) - (now - last_recover_at))
+        # Decide status
+        now = time.time()
 
-        action = "monitor"
-        reason = ""
-
-        if circuit_open and (not recover_history or now - recover_history[-1] > CIRCUIT_WINDOW_SEC):
-            circuit_open = False
-
-        if circuit_open:
-            record_state("RUNNING_ISSUE", issue="CIRCUIT_OPEN", running_issue=net_status, level="WARN")
-            action = "circuit_hold"
-            reason = "circuit breaker open"
-        elif grace_remaining > 0:
-            record_state("RUNNING_OK", issue="GRACE_PERIOD", running_issue=None, level="INFO")
-            action = "grace_wait"
-            reason = f"grace {int(grace_remaining)}s"
-        elif net_status == "NET_UNSTABLE":
-            record_state("RUNNING_ISSUE", issue=None, running_issue="NET_UNSTABLE", level="WARN")
-            action = "cooldown_net_unstable"
-            reason = "net unstable cooldown"
-        elif offline_streak >= OFFLINE_STREAK_NEED:
+        # OFFLINE confirmed => recover
+        if offline_streak >= OFFLINE_STREAK_NEED:
             record_state("OFFLINE", issue="OFFLINE", running_issue=None, level="WARN")
-            action = "maybe_recover_offline"
-            reason = f"offline streak={offline_streak}"
-        elif pid is not None and logcat_has_disconnect(pkg):
-            record_state("RUNNING_ISSUE", issue="DISCONNECT_279", running_issue="DISCONNECT_279", level="WARN")
-            action = "maybe_recover_disconnect"
-            reason = "disconnect_279"
-        elif ping_fail_streak >= PING_FAIL_STREAK_NEED:
-            record_state("RUNNING_ISSUE", issue=None, running_issue="NET_DOWN", level="WARN")
-            action = "net_down"
-            reason = f"ping_fail_streak={ping_fail_streak}"
-        elif pid is not None:
-            record_state("RUNNING_OK", issue=None, running_issue=None, level="OK")
-        elif pid is None and DEBUG:
-            log(f"[DBG] pid=None ping_fail_streak={ping_fail_streak}", "DBG")
 
-        should_attempt_recover = action in {"maybe_recover_offline", "maybe_recover_disconnect"} and not circuit_open
-        if is_protected_package(pkg):
-            should_attempt_recover = False
-            action = "protected_skip"
-            reason = "protected package skip recover"
-
-        # circuit breaker window
-        recover_history = [t for t in recover_history if now - t <= CIRCUIT_WINDOW_SEC]
-
-        if should_attempt_recover:
-            cooldown_target = NET_UNSTABLE_COOLDOWN if net_status == "NET_UNSTABLE" else RECOVER_COOLDOWN_SEC
-            if now - last_recover_at >= cooldown_target:
-                if len(recover_history) >= CIRCUIT_MAX_RECOVERS:
-                    circuit_open = True
-                    record_state("RUNNING_ISSUE", issue="CIRCUIT_OPEN", running_issue=net_status, level="ERR")
-                    log("Circuit breaker opened: too many recover attempts", "ERR")
-                else:
-                    recover_history.append(now)
-                    if trigger_recover(pkg, reason if reason else "AUTO") == 0:
-                        last_recover_at = time.time()
-                        grace_until = last_recover_at + GRACE_PERIOD_SEC
-                        action = "recover_triggered"
-                        reason = f"grace={GRACE_PERIOD_SEC}s"
-                    else:
-                        action = "recover_failed"
+            if now - last_recover_at >= RECOVER_COOLDOWN_SEC:
+                trigger_recover(pkg, "OFFLINE")
+                last_recover_at = time.time()
             else:
-                action = "cooldown_active"
-                reason = f"{int(cooldown_target - (now - last_recover_at))}s"
+                log(f"recover cooldown active ({int(RECOVER_COOLDOWN_SEC-(now-last_recover_at))}s left)", "INFO")
 
-        persist_cooldown_state()
+            time.sleep(SLOW_INTERVAL_SEC)
+            continue
 
-        log_event({
-            "ts": ts(),
-            "clone_id": CLONE_ID,
-            "package": pkg,
-            "pid": pid,
-            "resumed": resumed,
-            "oom_score": oom_score,
-            "net_status": net_status,
-            "net_detail": net_detail,
-            "offline_streak": offline_streak,
-            "ping_fail_streak": ping_fail_streak,
-            "action": action,
-            "reason": reason,
-            "cooldown_remaining": int(cooldown_remaining),
-            "grace_remaining": int(grace_remaining),
-            "circuit_open": circuit_open,
-        })
+        # If app running, check disconnect via logcat (279)
+        if pid is not None:
+            if logcat_has_disconnect(pkg):
+                record_state("RUNNING_ISSUE", issue="DISCONNECT_279", running_issue="DISCONNECT_279", level="WARN")
+
+                if now - last_recover_at >= RECOVER_COOLDOWN_SEC:
+                    trigger_recover(pkg, "DISCONNECT_279")
+                    last_recover_at = time.time()
+                else:
+                    log(f"recover cooldown active ({int(RECOVER_COOLDOWN_SEC-(now-last_recover_at))}s left)", "INFO")
+
+                time.sleep(SLOW_INTERVAL_SEC)
+                continue
+
+        # NET down: chỉ log (không recover)
+        if ping_fail_streak >= PING_FAIL_STREAK_NEED:
+            record_state("RUNNING_ISSUE", issue=None, running_issue="NET_DOWN", level="WARN")
+        else:
+            # if nothing wrong & previously had issues, mark OK once
+            if pid is not None and ping_fail_streak == 0:
+                record_state("RUNNING_OK", issue=None, running_issue=None, level="OK")
+            elif pid is None and DEBUG:
+                log(f"[DBG] pid=None ping_fail_streak={ping_fail_streak}", "DBG")
 
         time.sleep(SLOW_INTERVAL_SEC)
 

@@ -39,7 +39,7 @@ AutoToolV2/
 ├─ logs/
 │  ├─ watchdog.log             # Log watchdog
 │  └─ recover.log              # Log recover
-└─ runtime/state.<clone>.json  # trạng thái runtime (schema chuẩn bên dưới, clone mặc định = default)
+└─ state.json                  # (tuỳ chọn) trạng thái runtime (schema chuẩn bên dưới)
 3) Chạy nhanh (Quick start)
 3.1 Mở menu
 bash
@@ -189,7 +189,6 @@ Nếu dùng state.json để các workflow giao tiếp, hãy giữ đúng schema
 ```json
 {
   "package": "com.example.game",          // tên package đang theo dõi
-  "clone_id": "default",                  // id clone (AUTOTOOL_CLONE), để chạy nhiều instance độc lập
   "status": "RUNNING_OK",                 // RUNNING_OK | RUNNING_ISSUE | OFFLINE | STOPPED
   "issue": "OFFLINE",                     // (optional) issue đã xác nhận, có thể null
   "running_issue": "NET_DOWN"             // (optional) issue đang gặp khi RUNNING_ISSUE, có thể null
@@ -204,45 +203,10 @@ Log watchdog sẽ luôn đi kèm dòng `STATE pkg=<pkg> status=<status> issue=<i
   - Terminal 1: `bash workflows/watchdog_start.sh <package>` và xem log bằng `tail -f logs/watchdog.log`.
   - Terminal 2: `bash workflows/auto_rejoin.sh <package>` và xem log bằng `tail -f logs/auto_rejoin.log`.
 - Kịch bản thử:
-  1. App đang chạy bình thường: trong `logs/watchdog.log` có dòng `STATE ... status=RUNNING_OK ...` và `runtime/state.<clone>.json` phản ánh tương ứng.
-  2. Tắt app (force-stop): watchdog log `STATE ... status=OFFLINE ...`, `runtime/state.<clone>.json` đổi sang OFFLINE, auto_rejoin log `status=STATUS OFFLINE ...` và gọi recover (xem thêm `logs/recover.log`).
+  1. App đang chạy bình thường: trong `logs/watchdog.log` có dòng `STATE ... status=RUNNING_OK ...` và `state.json` phản ánh tương ứng.
+  2. Tắt app (force-stop): watchdog log `STATE ... status=OFFLINE ...`, `state.json` đổi sang OFFLINE, auto_rejoin log `status=STATUS OFFLINE ...` và gọi recover (xem thêm `logs/recover.log`).
   3. Ngắt mạng (ping fail): watchdog log `STATE ... status=RUNNING_ISSUE ... running_issue=NET_DOWN`, auto_rejoin thấy `running_issue=NET_DOWN` và bắn recover (sau cooldown).
-- Sau khi thử xong, stop bằng `bash workflows/watchdog_stop.sh` hoặc `Ctrl+C` ở các terminal và kiểm tra `runtime/state.<clone>.json` cuối cùng có status `STOPPED` nếu watchdog dừng.
-
-12.1) Chống spam restart + circuit breaker
-- Watchdog chỉ recover khi PID mất thật (debounce) + kiểm tra network đa tín hiệu.
-- Sau mỗi recover, có grace period (GRACE_PERIOD_SEC) không đánh offline ngay.
-- Circuit breaker: nếu recover >=3 lần trong 5 phút sẽ “open”, chỉ log trạng thái và không tự kill/launch, chờ user can thiệp.
-- Net flapping (NET_UNSTABLE) sẽ bật cooldown dài hơn (NET_UNSTABLE_COOLDOWN) để tránh loop.
-- Các package được bảo vệ (com.termux, com.termux.x11) sẽ không bị recover/kill.
-
-13) Debug/Test nhanh trên Termux
-- Bật DEBUG log cho watchdog:
-  ```bash
-  AUTOTOOL_DEBUG=1 bash workflows/watchdog_start.sh <package>
-  # hoặc chạy tay:
-  AUTOTOOL_DEBUG=1 python engine/watchdog.py <package>
-  ```
-- Xem log tail kèm highlight:
-  ```bash
-  tail -f logs/watchdog.log | grep --line-buffered -E \"STATE|ERR|WARN\"
-  tail -f logs/auto_rejoin.log
-  ```
-- Kiểm tra state.json theo schema chuẩn:
-  ```bash
-  cat state.json | jq .
-  ```
-- Dừng tiến trình khi test:
-  ```bash
-  bash workflows/watchdog_stop.sh
-  pkill -f auto_rejoin.sh   # hoặc Ctrl+C tại terminal đang chạy auto_rejoin
-  ```
-
-14) Test plan gợi ý (quan sát logs/watchdog.log + logs/events.log + runtime/state.<clone>.json)
-- Case 1: tắt mạng 60s -> watchdog báo NET_DOWN/NET_UNSTABLE, recover tối đa 1 lần, không loop do cooldown dài hơn.
-- Case 2: giả lập Termux X crash -> circuit breaker không cho kill com.termux/com.termux.x11; app không bị spam restart.
-- Case 3: mạng chập chờn -> chuyển NET_UNSTABLE, ghi cooldown dài và không recover liên tục.
-- Case 4: nhiều clone -> đặt AUTOTOOL_CLONE khác nhau, mỗi clone ghi state/cooldown riêng (`runtime/state.<clone>.json`, `runtime/cooldown.<clone>.json`), log events kèm clone_id.
+- Sau khi thử xong, stop bằng `bash workflows/watchdog_stop.sh` hoặc `Ctrl+C` ở các terminal và kiểm tra `state.json` cuối cùng có status `STOPPED` nếu watchdog dừng.
 
 10) License
 TBD
