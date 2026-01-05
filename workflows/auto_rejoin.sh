@@ -4,9 +4,11 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOG="$ROOT/logs/auto_rejoin.log"
 PIDFILE="$ROOT/logs/auto_rejoin.pid"
-STATE="$ROOT/state.json"
+CLONE_ID="${AUTOTOOL_CLONE:-default}"
+STATE="$ROOT/runtime/state.${CLONE_ID}.json"
+STATE_FALLBACK="$ROOT/state.json"
 
-mkdir -p "$ROOT/logs" "$ROOT/config"
+mkdir -p "$ROOT/logs" "$ROOT/config" "$ROOT/runtime"
 
 ts(){ date "+%Y-%m-%d %H:%M:%S"; }
 log(){
@@ -38,11 +40,12 @@ fi
 
 # đọc status từ state.json (không phụ thuộc format quá cứng)
 read_status() {
-  python - <<'PY' "$STATE"
+  python - <<'PY' "$STATE" "$STATE_FALLBACK"
 import json, sys, os
-p=sys.argv[1]
-if not os.path.exists(p):
+paths = [p for p in sys.argv[1:] if os.path.exists(p)]
+if not paths:
     print("NO_STATE"); raise SystemExit
+p = paths[0]
 try:
     d=json.load(open(p,"r",encoding="utf-8"))
 except Exception:
